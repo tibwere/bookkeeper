@@ -71,6 +71,10 @@
     <module>shaded</module>
     <module>microbenchmarks</module>
     <module>tests</module>
+
+    <!-- isw2 project -->
+    <module>bookkeeper-aggr-coverage</module>
+
   </modules>
   <mailingLists>
     <mailingList>
@@ -110,6 +114,12 @@
     <javac.target>1.8</javac.target>
     <redirectTestOutputToFile>true</redirectTestOutputToFile>
     <testRetryCount>2</testRetryCount>
+
+    <!-- isw2 project -->
+    <sonar.coverage.jacoco.xmlReportPaths>${maven.multiModuleProjectDirectory}/tests/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+    <sonar.organization>tibwere</sonar.organization>
+    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+    <sonar.projectKey>tibwere_bookkeeper</sonar.projectKey>
 
     <!-- dependencies -->
     <arquillian-cube.version>1.18.2</arquillian-cube.version>
@@ -1221,5 +1231,30 @@
         </plugins>
       </build>
     </profile>
+
+    <!-- isw2 project -->
+    <profile>
+      <id>isw2-coverage</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
   </profiles>
 </project>
