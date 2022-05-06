@@ -6,11 +6,15 @@
         <groupId>org.apache.bookkeeper</groupId>
         <version>4.15.0-SNAPSHOT</version>
     </parent>
-
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.bookkeeper</groupId>
+            <artifactId>bookkeeper-server</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+    </dependencies>
     <artifactId>bookkeeper-aggr-coverage</artifactId>
-
     <name>Apache Bookkeeper :: Aggregate Coverage Report (for JaCoCo/SonarCloud)</name>
-
     <build>
         <plugins>
             <plugin>
@@ -28,5 +32,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
