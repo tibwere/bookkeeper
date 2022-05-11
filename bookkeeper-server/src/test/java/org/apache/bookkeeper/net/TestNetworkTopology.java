@@ -63,11 +63,11 @@ public class TestNetworkTopology {
 
             return Arrays.asList(new Object[][]{
                     // NODE_NAME    NODE_LOCATION           RACK                EXPECTED_LEAVES     EXPECTED_EXCEPTION
-                    {  validName,   validLocations[0],      validLocations[0],  1,                  false},
-                    {  invalidName, validLocations[1],      validLocations[1],  1,                  true},
-                    {  null,        validLocations[0],      validLocations[1],  0,                  false},
-                    {  validName,   invalidLocations[0],    validLocations[0],  0,                  true},
-                    {  validName,   invalidLocations[1],    validLocations[1],  0,                  true}
+                    {  validName,   validLocations[0],      validLocations[0],  1,                  false   },
+                    {  invalidName, validLocations[1],      validLocations[1],  1,                  true    },
+                    {  null,        validLocations[0],      validLocations[1],  0,                  false   },
+                    {  validName,   invalidLocations[0],    validLocations[0],  0,                  true    },
+                    {  validName,   invalidLocations[1],    validLocations[1],  0,                  true    }
             });
         }
 
@@ -130,9 +130,10 @@ public class TestNetworkTopology {
                 Node node = new NodeBase("test-node", NodeBase.PATH_SEPARATOR_STR + "test-rack");
 
                 return Arrays.asList(new Object[][]{
-                        {node, RemovalTypes.ADDED},
-                        {node, RemovalTypes.NOT_ADDED},
-                        {null, RemovalTypes.INNER}
+                        // NODE_TO_BE_ADDED     TYPE_OF_REMOVAL
+                        {  node,                RemovalTypes.ADDED      },
+                        {  node,                RemovalTypes.NOT_ADDED  },
+                        {  null,                RemovalTypes.INNER      }
                 });
 
             } catch (IllegalArgumentException e) {

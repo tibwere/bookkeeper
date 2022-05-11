@@ -102,9 +102,9 @@ public class TestBookie {
             final byte []validMasterKey = "master".getBytes(StandardCharsets.UTF_8);
             return Arrays.asList(new Object[][]{
                     // LEDGER_ID    ENTRY_ID    ACK_BEFORE_SYNC     CTX             MASTER_KEY      EXPECTED_EXCEPTION
-                    {  0,           0,          true,               null,           validMasterKey, false },
-                    {  1,           1,          false,              null,           validMasterKey, false },
-                    {  -1,          -1,         true,               new Object(),   null,           true  },
+                    {  0,           0,          true,               null,           validMasterKey, false   },
+                    {  1,           1,          false,              null,           validMasterKey, false   },
+                    {  -1,          -1,         true,               new Object(),   null,           true    },
             });
         }
 
@@ -159,8 +159,9 @@ public class TestBookie {
                     .setAllowLoopback(false);
 
             return Arrays.asList(new Object[][]{
-                    {allowLoopbackCfg, false},
-                    {denyLoopbackCfg, true}
+                    // SERVER_CONFIGURATION     EXPECTED_EXCEPTION
+                    {  allowLoopbackCfg,        false   },
+                    {  denyLoopbackCfg,         true    }
             });
         }
 
