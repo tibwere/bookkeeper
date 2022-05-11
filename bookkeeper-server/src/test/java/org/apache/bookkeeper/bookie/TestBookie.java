@@ -1,4 +1,4 @@
-package it.uniroma2.dicii.isw2.bookkeeper;
+package org.apache.bookkeeper.bookie;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
