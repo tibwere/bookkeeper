@@ -2,14 +2,15 @@ package it.uniroma2.dicii.isw2.bookkeeper;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.apache.bookkeeper.bookie.*;
+import org.apache.bookkeeper.bookie.Bookie;
+import org.apache.bookkeeper.bookie.BookieImpl;
+import org.apache.bookkeeper.bookie.TestBookieImpl;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.conf.TestBKConfiguration;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.net.BookieSocketAddress;
 import org.apache.bookkeeper.net.DNS;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks;
-import org.eclipse.jetty.server.Server;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -193,6 +194,5 @@ public class TestBookie {
                 Assert.assertTrue("This parameter configuration should cause an exception", this.expectedException);
             }
         }
-
     }
 }
