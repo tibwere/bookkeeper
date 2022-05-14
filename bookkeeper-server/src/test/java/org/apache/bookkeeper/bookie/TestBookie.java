@@ -2,15 +2,14 @@ package org.apache.bookkeeper.bookie;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.apache.bookkeeper.bookie.Bookie;
-import org.apache.bookkeeper.bookie.BookieImpl;
-import org.apache.bookkeeper.bookie.TestBookieImpl;
+import org.apache.bookkeeper.client.LedgerEntry;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.conf.TestBKConfiguration;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.net.BookieSocketAddress;
 import org.apache.bookkeeper.net.DNS;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,21 +28,42 @@ import static org.mockito.Mockito.*;
 @RunWith(value = Enclosed.class)
 public class TestBookie {
 
+    private static final byte[] DUMMY_PAYLOAD = "THIS IS AN ENTRY".getBytes(StandardCharsets.UTF_8);
+
     /**
-     * This method has been copied from: <a href="https://github.com/apache/bookkeeper/blob/ff3607587a000507ad21e024ed58e51206290684/bookkeeper-server/src/test/java/org/apache/bookkeeper/bookie/LedgerCacheTest.java#L808">LedgerCacheTest (original)</a>
-     * @param ledger ledger id
-     * @param entry entry id
-     * @return ByteBuf representation of the entry
+     * This method is based on the description of a {@link LedgerEntry} structure.
+     * @param entryNumber entry id
+     * @return ByteBuf representation of the entry (VALID)
      */
-    public static ByteBuf generateEntry(long ledger, long entry) {
-        byte[] data = ("ledger-" + ledger + "-" + entry).getBytes();
-        ByteBuf bb = Unpooled.buffer(8 + 8 + data.length);
-        bb.writeLong(ledger);
-        bb.writeLong(entry);
-        bb.writeBytes(data);
+    public static ByteBuf generateValidEntry(long entryNumber) {
+        final long ledgerID = 0;
+        final int byteBufSize = Long.BYTES + Long.BYTES + DUMMY_PAYLOAD.length;
+
+        ByteBuf bb = Unpooled.buffer(byteBufSize);
+        bb.writeLong(ledgerID);
+        bb.writeLong(entryNumber);
+        bb.writeBytes(DUMMY_PAYLOAD);
+
         return bb;
     }
 
+    /**
+     * This method is based on the description of a {@link LedgerEntry} structure.
+     * @return ByteBuf representation of the entry (INVALID)
+     */
+    public static ByteBuf generateInvalidEntryWithoutHeader() {
+        ByteBuf bb = Unpooled.buffer(DUMMY_PAYLOAD.length);
+        bb.writeBytes(DUMMY_PAYLOAD);
+
+        return bb;
+    }
+
+    /**
+     * This method returns a mocked instance of WriteCallback that does nothing
+     * when writeComplete is invoked.
+     *
+     * @return a mocked WriteCallback
+     */
     public static BookkeeperInternalCallbacks.WriteCallback generateMockedNopCb() {
         BookkeeperInternalCallbacks.WriteCallback nopCb = mock(BookkeeperInternalCallbacks.WriteCallback.class);
         /* A NOP callback should do nothing when invoked */
@@ -55,10 +75,7 @@ public class TestBookie {
 
     @RunWith(value = Parameterized.class)
     public static class AddEntryTests {
-
-        private ServerConfiguration serverConfiguration;
-        private long ledgerId;
-        private long entryId;
+        private ByteBuf entry;
         private boolean ackBeforeSync;
         private Object ctx;
         private byte[] masterKey;
@@ -66,16 +83,14 @@ public class TestBookie {
 
         private Bookie bookie;
 
-        public AddEntryTests(long ledgerId, long entryId, boolean ackBeforeSync, Object ctx, byte[] masterKey,
+        public AddEntryTests(ByteBuf entry, boolean ackBeforeSync, Object ctx, byte[] masterKey,
                              boolean expectedException) {
-            configure(ledgerId, entryId, ackBeforeSync, ctx, masterKey, expectedException);
+            configure(entry, ackBeforeSync, ctx, masterKey, expectedException);
         }
 
-        public void configure(long ledgerId, long entryId, boolean ackBeforeSync, Object ctx, byte[] masterKey,
+        public void configure(ByteBuf entry, boolean ackBeforeSync, Object ctx, byte[] masterKey,
                               boolean expectedException) {
-            this.serverConfiguration = TestBKConfiguration.newServerConfiguration();
-            this.ledgerId = ledgerId;
-            this.entryId = entryId;
+            this.entry = entry;
             this.ackBeforeSync = ackBeforeSync;
             this.ctx = ctx;
             this.masterKey = masterKey;
@@ -90,8 +105,7 @@ public class TestBookie {
 
         /**
          * BOUNDARY VALUE ANALYSIS
-         *  - ledgerId:         [-1, 0, 1]
-         *  - entryId:          [-1, 0, 1]
+         *  - entry:            [valid, invalid, null]
          *  - ackBeforeSync:    [true, false]
          *  - ctx:              [null, new instance of object]
          *  - masterKey:        [null, valid]
@@ -101,10 +115,10 @@ public class TestBookie {
         public static Collection<Object[]> testCasesTuples() {
             final byte []validMasterKey = "master".getBytes(StandardCharsets.UTF_8);
             return Arrays.asList(new Object[][]{
-                    // LEDGER_ID    ENTRY_ID    ACK_BEFORE_SYNC     CTX             MASTER_KEY      EXPECTED_EXCEPTION
-                    {  0,           0,          true,               null,           validMasterKey, false   },
-                    {  1,           1,          false,              null,           validMasterKey, false   },
-                    {  -1,          -1,         true,               new Object(),   null,           true    },
+                    // ENTRY                                ACK_BEFORE_SYNC     CTX             MASTER_KEY          EXPECTED_EXCEPTION
+                    {  generateValidEntry(0),               true,               null,           validMasterKey,     false},
+                    {  null,                                false,              null,           validMasterKey,     true},
+                    {  generateInvalidEntryWithoutHeader(), true,               new Object(),   null,               true},
             });
         }
 
@@ -113,6 +127,7 @@ public class TestBookie {
             this.bookie.start();
         }
 
+        @After
         public void shutdownBookie() {
             this.bookie.shutdown();
         }
@@ -120,8 +135,7 @@ public class TestBookie {
         @Test
         public void testAddEntry() {
             try {
-                this.bookie.addEntry(generateEntry(this.ledgerId, this.entryId), this.ackBeforeSync,
-                        generateMockedNopCb(), this.ctx, this.masterKey);
+                this.bookie.addEntry(this.entry, this.ackBeforeSync, generateMockedNopCb(), this.ctx, this.masterKey);
 
                 Assert.assertFalse("An exception should be thrown", this.expectedException);
             } catch (Exception e) {
@@ -167,9 +181,6 @@ public class TestBookie {
 
         /**
          * This method calculates the expected value based on a third-party function.
-         *
-         * Therefore, the correctness of the test case is a function of the correctness of the implementation of the
-         * java.net library.
          *
          * @param cfg Server configuration
          * @return dotted decimal representation of the address
