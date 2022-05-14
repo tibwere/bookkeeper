@@ -26,7 +26,7 @@ import java.util.Collection;
 import static org.mockito.Mockito.*;
 
 @RunWith(value = Enclosed.class)
-public class TestBookie {
+public class BookieImplTests {
 
     private static final byte[] DUMMY_PAYLOAD = "THIS IS AN ENTRY".getBytes(StandardCharsets.UTF_8);
 

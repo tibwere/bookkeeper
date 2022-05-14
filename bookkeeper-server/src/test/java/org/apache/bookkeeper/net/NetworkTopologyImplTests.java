@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.Set;
 
 @RunWith(value = Enclosed.class)
-public class TestNetworkTopology {
+public class NetworkTopologyImplTests {
 
     @RunWith(value = Parameterized.class)
     public static class AddNodeAndCheckTests {
