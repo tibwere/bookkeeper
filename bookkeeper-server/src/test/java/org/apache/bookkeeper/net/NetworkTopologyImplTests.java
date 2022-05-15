@@ -95,12 +95,11 @@ public class NetworkTopologyImplTests {
 
         private NetworkTopology nt;
 
-        public RemoveNodeTests(Node nodeToBeAdded, RemovalTypes typeOfRemoval) {
-            configure(nodeToBeAdded, typeOfRemoval);
+        public RemoveNodeTests(RemovalTypes typeOfRemoval) {
+            configure(typeOfRemoval);
         }
 
-        public void configure(Node nodeToBeAdded, RemovalTypes typeOfRemoval) {
-            this.nodeToBeAdded = nodeToBeAdded;
+        public void configure(RemovalTypes typeOfRemoval) {
             this.typeOfRemoval = typeOfRemoval;
             this.nt = new NetworkTopologyImpl();
         }
@@ -108,43 +107,28 @@ public class NetworkTopologyImplTests {
         @Before
         public void addInitialNode() {
             try {
+                this.nodeToBeAdded = new NodeBase("test-node", NodeBase.PATH_SEPARATOR_STR + "test-rack");
                 nt.add(this.nodeToBeAdded);
             } catch (IllegalArgumentException e) {
-                Assert.fail("This test assumes that node to be inserted initially is valid (or null)");
+                Assert.fail("This test assumes that node to be inserted initially is valid");
             }
         }
 
         /**
          * BOUNDARY VALUE ANALYSIS
-         *  - nodeToBeAdded: Since the test is focused on the removal it is assumed to use only valid or null nodes
-         *      (if you choose an invalid node as a parameter the test fails deterministically due to the Assert.fail)
-         *
-         *      [valid_node, null]
-         *
          * - typeOfRemoval [ADDED, NOT_ADDED, INNER]
          */
         @Parameterized.Parameters
         public static Collection<Object[]> testCasesTuples() {
-
-            try {
-                Node node = new NodeBase("test-node", NodeBase.PATH_SEPARATOR_STR + "test-rack");
-
                 return Arrays.asList(new Object[][]{
-                        // NODE_TO_BE_ADDED     TYPE_OF_REMOVAL
-                        {  node,                RemovalTypes.ADDED      },
-                        {  node,                RemovalTypes.NOT_ADDED  },
-                        {  null,                RemovalTypes.INNER      }
+                        // TYPE_OF_REMOVAL
+                        {  RemovalTypes.ADDED      },
+                        {  RemovalTypes.NOT_ADDED  },
+                        {  RemovalTypes.INNER      }
                 });
-
-            } catch (IllegalArgumentException e) {
-                Assert.fail("This test assumes that node to be inserted initially is valid (or null)");
-                return null;
-            }
         }
 
-        @Test
-        public void testRemoveNode() {
-
+        private Node getNodeToBeRemoved() {
             Node nodeToBeRemoved = null;
             switch (this.typeOfRemoval) {
                 case ADDED:
@@ -162,16 +146,34 @@ public class NetworkTopologyImplTests {
                     }
             }
 
-            try {
-                this.nt.remove(nodeToBeRemoved);
-                Assert.assertFalse("It is not possible to remove inner node",
-                        RemovalTypes.INNER.equals(this.typeOfRemoval));
+            return nodeToBeRemoved;
+        }
 
+        @Test
+        public void testRemoveNode() {
+
+            try {
+                Node nodeToBeRemoved = getNodeToBeRemoved();
+
+                int oldSize = this.nt.getLeaves(nodeToBeAdded.getNetworkLocation()).size();
+                this.nt.remove(nodeToBeRemoved);
+                int newSize = this.nt.getLeaves(nodeToBeAdded.getNetworkLocation()).size();
+
+                switch (this.typeOfRemoval) {
+                    case ADDED:
+                        Assert.assertEquals("The number of leaves should be decreased", oldSize-1, newSize);
+                        break;
+                    case INNER:
+                        Assert.fail("It is not possible to remove inner node");
+                        break;
+                    case NOT_ADDED:
+                        Assert.assertEquals("The number of leaves should not be decreased", oldSize, newSize);
+                        break;
+                }
             } catch (IllegalArgumentException e) {
                 Assert.assertTrue("It is not possible to remove inner node",
                         RemovalTypes.INNER.equals(this.typeOfRemoval));
             }
-
         }
     }
 
