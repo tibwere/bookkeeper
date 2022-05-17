@@ -18,6 +18,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -206,16 +207,14 @@ public class BookieImplTests {
     public static class GetBookieAddressTests {
 
         private ServerConfiguration conf;
-        private String expectedAddress;
         private boolean expectedException;
 
-        public GetBookieAddressTests(ServerConfiguration conf, String expectedAddress, boolean expectedException) {
-            configure(conf, expectedAddress, expectedException);
+        public GetBookieAddressTests(ServerConfiguration conf, boolean expectedException) {
+            configure(conf, expectedException);
         }
 
-        public void configure(ServerConfiguration conf, String expectedAddress, boolean expectedException) {
+        public void configure(ServerConfiguration conf, boolean expectedException) {
             this.conf = conf;
-            this.expectedAddress = expectedAddress;
             this.expectedException = expectedException;
         }
 
@@ -227,10 +226,9 @@ public class BookieImplTests {
          */
         @Parameterized.Parameters
         public static Collection<Object[]> testCasesTuples() {
-            String advAddr = "isw2.software.testing";
             ServerConfiguration defaultConf = TestBKConfiguration.newServerConfiguration();
             ServerConfiguration advertisedAddrConf = TestBKConfiguration.newServerConfiguration()
-                    .setAdvertisedAddress(advAddr);
+                    .setAdvertisedAddress("isw2.software.testing");
             ServerConfiguration nullListeningInterface = TestBKConfiguration.newServerConfiguration()
                     .setListeningInterface(null);
             ServerConfiguration hostNameAsBookieIDConf = TestBKConfiguration.newServerConfiguration()
@@ -244,14 +242,14 @@ public class BookieImplTests {
                     .setBookiePort(Integer.MAX_VALUE);
 
             return Arrays.asList(new Object[][]{
-                    // SERVER_CONFIG                EXPECTED_ADDR   EXPECTED_EXCEPTION  NOTE
-                    { defaultConf,                  "127.0.0.1",    false   },
-                    { advertisedAddrConf,           advAddr,        false   },
-                    { nullListeningInterface,       "127.0.1.1",    false   },          // see /etc/hosts
-                    { hostNameAsBookieIDConf,       "localhost",    false   },
-                    { shortHostNameAsBookieIDConf,  "localhost",    false   },          // does not contain dots (so it is the same as before)
-                    { denyLoopbackConf,             null,           true    },
-                    { invalidPortConf,              null,           true    }
+                    // SERVER_CONFIG                EXPECTED_EXCEPTION
+                    { defaultConf,                  false   },
+                    { advertisedAddrConf,           false   },
+                    { nullListeningInterface,       false   },
+                    { hostNameAsBookieIDConf,       false   },
+                    { shortHostNameAsBookieIDConf,  false   },
+                    { denyLoopbackConf,             true    },
+                    { invalidPortConf,              true    }
             });
         }
 
@@ -259,14 +257,42 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                Assert.assertEquals(this.expectedAddress, sa.getHostName());
+                Assert.assertEquals(this.getExpectedAddress(), sa.getHostName());
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
             } catch (UnknownHostException | IllegalArgumentException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
             }
         }
 
+        /**
+         * Since these tests must run in any machine and not only in the local one,
+         * the address cannot be hardcoded, so it is evaluated using InetAddress.getByName
+         * instead of InetSocketAddress.
+         */
+        private String getExpectedAddress() throws UnknownHostException {
 
+            /* If an address is advertised returns it*/
+            if (this.conf.getAdvertisedAddress() != null)
+                return this.conf.getAdvertisedAddress();
+
+            /* Otherwise, use listening interface to derive hostname*/
+            String iface = (this.conf.getListeningInterface() == null) ?
+                    "default" : this.conf.getListeningInterface();
+            String hostname = DNS.getDefaultHost(iface);
+
+            /*
+             * If in the configuration it's specified to use hostname as bookieID,
+             * then use canonical host name.
+             * (see. https://superuser.com/questions/394816/what-is-the-difference-and-relation-between-host-name-and-canonical-name#:~:text=The%20host%20name%20is%20the,host%20is%20not%20actually%20called.)
+             */
+            if (this.conf.getUseHostNameAsBookieID()) {
+                String ha = InetAddress.getByName(hostname).getCanonicalHostName();
+                /* In this case the comments inside the function has been taken as documentation */
+                return (this.conf.getUseShortHostName()) ? ha.split("\\.", 2)[0] : ha;
+            } else {
+                return InetAddress.getByName(hostname).getHostAddress();
+            }
+        }
     }
 
     /**
