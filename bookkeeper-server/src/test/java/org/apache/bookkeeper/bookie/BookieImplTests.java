@@ -18,12 +18,11 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -259,7 +258,7 @@ public class BookieImplTests {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
                 Assert.assertEquals(this.getExpectedAddress(), sa.getHostName());
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
-            } catch (UnknownHostException | IllegalArgumentException e) {
+            } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
             }
         }
@@ -269,16 +268,25 @@ public class BookieImplTests {
          * the address cannot be hardcoded, so it is evaluated using InetAddress.getByName
          * instead of InetSocketAddress.
          */
-        private String getExpectedAddress() throws UnknownHostException {
+        private String getExpectedAddress() throws UnknownHostException, SocketException {
 
             /* If an address is advertised returns it*/
             if (this.conf.getAdvertisedAddress() != null)
                 return this.conf.getAdvertisedAddress();
 
-            /* Otherwise, use listening interface to derive hostname*/
-            String iface = (this.conf.getListeningInterface() == null) ?
-                    "default" : this.conf.getListeningInterface();
-            String hostname = DNS.getDefaultHost(iface);
+            String hostname = null;
+            /* Use the local host canonical name or use a specified interface to determine it */
+            if (this.conf.getListeningInterface() == null) {
+                hostname = InetAddress.getLocalHost().getCanonicalHostName();
+            } else {
+                Enumeration<InetAddress> enumIf = NetworkInterface.getByName(
+                        this.conf.getListeningInterface()).getInetAddresses();
+                if (!enumIf.hasMoreElements())
+                    hostname = InetAddress.getLocalHost().getCanonicalHostName();
+                else
+                    /* fallback */
+                    hostname = enumIf.nextElement().getCanonicalHostName();
+            }
 
             /*
              * If in the configuration it's specified to use hostname as bookieID,
