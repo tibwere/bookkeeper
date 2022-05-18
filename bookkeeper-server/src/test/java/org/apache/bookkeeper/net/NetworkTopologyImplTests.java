@@ -203,13 +203,16 @@ public class NetworkTopologyImplTests {
 
     public static class ForcedScenariosTests {
 
+        /******************************/
+        /** Forced scenarios for add **/
+        /******************************/
+
         @Test
         public void testAddRackAndNonRackSameLevel() {
             NetworkTopology nt = new NetworkTopologyImpl();
-            Node validNode = null;
             Node invalidNode = null;
             try {
-                validNode = new NodeBase("test-node-1", NodeBase.PATH_SEPARATOR_STR + "rack0");
+                Node validNode = new NodeBase("test-node-1", NodeBase.PATH_SEPARATOR_STR + "rack0");
                 invalidNode = new NodeBase("test-node-2", NodeBase.PATH_SEPARATOR_STR + "rack0/sec1");
                 nt.add(validNode);
             } catch (Exception e) {
@@ -267,6 +270,23 @@ public class NetworkTopologyImplTests {
             Assert.assertTrue("The node is valid, so it should be inserted (2)", nt.contains(valid2));
         }
 
+        /***********************************/
+        /** Forced scenarios for contains **/
+        /***********************************/
+
+        @Test
+        public void testNodeWithExplicitParent() {
+            Node parent = new NodeBase("parent", NodeBase.PATH_SEPARATOR_STR + "/rack0");
+            Node child = new NodeBase("child", NodeBase.PATH_SEPARATOR_STR + "/rack0", parent, 1);
+            NetworkTopology nt = new NetworkTopologyImpl();
+
+            Assert.assertFalse("This node has not been added", nt.contains(child));
+        }
+
+       /************************************/
+       /** Forced scenarios for getLeaves **/
+       /************************************/
+
         @Test
         public void getLeavesWithTilde() {
             NetworkTopology nt = new NetworkTopologyImpl();
@@ -277,13 +297,35 @@ public class NetworkTopologyImplTests {
             Assert.assertEquals(0, nt.getLeaves("~" + location).size());
         }
 
-        @Test
-        public void testNodeWithExplicitParent() {
-            Node parent = new NodeBase("parent", NodeBase.PATH_SEPARATOR_STR + "/rack0");
-            Node child = new NodeBase("child", NodeBase.PATH_SEPARATOR_STR + "/rack0", parent, 1);
-            NetworkTopology nt = new NetworkTopologyImpl();
+       /*********************************/
+       /** Forced scenarios for remove **/
+       /*********************************/
 
-            Assert.assertFalse("This node has not been added", nt.contains(child));
+        @Test
+        public void testRemoveNullShouldReturnImmediately() {
+            try {
+                NetworkTopology nt = new NetworkTopologyImpl();
+                nt.remove(null);
+                Assert.assertTrue(true);
+            } catch (Exception e) {
+                Assert.fail("No exception should be raised");
+            }
+        }
+
+        @Test
+        public void testIfRackNullNumOfRacksShouldNotChange() {
+            NetworkTopology nt = spy(NetworkTopologyImpl.class);
+            when(nt.getNode(notNull())).thenReturn(new NetworkTopologyImpl.InnerNode(
+                    "core", NodeBase.PATH_SEPARATOR_STR + "rack0"));
+
+            Node n = new NodeBase("test-node", NodeBase.PATH_SEPARATOR_STR + "rack0");
+            nt.add(n);
+
+            int before = nt.getNumOfRacks();
+            nt.remove(n);
+            int after = nt.getNumOfRacks();
+
+            Assert.assertEquals("Number of racks should not change if rack is not null", before, after);
         }
     }
 
@@ -330,35 +372,6 @@ public class NetworkTopologyImplTests {
                             nt.contains(this.validNode), SearchNode.PRESENT.equals(this.typeOfSearch));
             }
 
-        }
-    }
-
-    public static class RemoveForcedScenariosTests {
-        @Test
-        public void testRemoveNullShouldReturnImmediately() {
-            try {
-                NetworkTopology nt = new NetworkTopologyImpl();
-                nt.remove(null);
-                Assert.assertTrue(true);
-            } catch (Exception e) {
-                Assert.fail("No exception should be raised");
-            }
-        }
-
-        @Test
-        public void testIfRackNullNumOfRacksShouldNotChange() {
-            NetworkTopology nt = spy(NetworkTopologyImpl.class);
-            when(nt.getNode(notNull())).thenReturn(new NetworkTopologyImpl.InnerNode(
-                    "core", NodeBase.PATH_SEPARATOR_STR + "rack0"));
-
-            Node n = new NodeBase("test-node", NodeBase.PATH_SEPARATOR_STR + "rack0");
-            nt.add(n);
-
-            int before = nt.getNumOfRacks();
-            nt.remove(n);
-            int after = nt.getNumOfRacks();
-
-            Assert.assertEquals("Number of racks should not change if rack is not null", before, after);
         }
     }
 
