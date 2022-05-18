@@ -1238,7 +1238,7 @@
 
     <!-- isw2 project -->
     <profile>
-      <id>isw2-coverage</id>
+      <id>jacoco-coverage</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
