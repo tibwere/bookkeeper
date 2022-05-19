@@ -15,6 +15,7 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -312,6 +313,7 @@ public class BookieImplTests {
      */
     @RunWith(PowerMockRunner.class)
     @PrepareForTest(DNS.class)
+    @PowerMockIgnore("javax.management.*")
     public static class ForceUnknownHostExceptionTest {
 
         @Test
@@ -339,6 +341,7 @@ public class BookieImplTests {
      */
     @RunWith(value = PowerMockRunner.class)
     @PrepareForTest(DNS.class)
+    @PowerMockIgnore("javax.management.*")
     public static class ForceNotLoopbackAddressTest {
 
         @Test
