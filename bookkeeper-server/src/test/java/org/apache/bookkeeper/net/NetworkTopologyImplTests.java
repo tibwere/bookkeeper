@@ -277,10 +277,13 @@ public class NetworkTopologyImplTests {
         @Test
         public void testNodeWithExplicitParent() {
             Node parent = new NodeBase("parent", NodeBase.PATH_SEPARATOR_STR + "/rack0");
-            Node child = new NodeBase("child", NodeBase.PATH_SEPARATOR_STR + "/rack0", parent, 1);
+            Node child1 = new NodeBase("child", NodeBase.PATH_SEPARATOR_STR + "/rack0", parent, 1);
+            Node child2 = new NodeBase("child", NodeBase.PATH_SEPARATOR_STR + "/rack0", parent, 0);
+
             NetworkTopology nt = new NetworkTopologyImpl();
 
-            Assert.assertFalse("This node has not been added", nt.contains(child));
+            Assert.assertFalse("This node has not been added", nt.contains(child1));
+            Assert.assertFalse("This node has not been added", nt.contains(child2));
         }
 
        /************************************/

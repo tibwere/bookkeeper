@@ -239,6 +239,8 @@ public class BookieImplTests {
                     .setAllowLoopback(false);
             ServerConfiguration invalidPortConf = TestBKConfiguration.newServerConfiguration()
                     .setBookiePort(Integer.MAX_VALUE);
+            ServerConfiguration zeroLengthAdvAddressConf = TestBKConfiguration.newServerConfiguration()
+                    .setAdvertisedAddress("");
 
             return Arrays.asList(new Object[][]{
                     // SERVER_CONFIG                EXPECTED_EXCEPTION
@@ -248,7 +250,8 @@ public class BookieImplTests {
                     { hostNameAsBookieIDConf,       false   },
                     { shortHostNameAsBookieIDConf,  false   },
                     { denyLoopbackConf,             true    },
-                    { invalidPortConf,              true    }
+                    { invalidPortConf,              true    },
+                    { zeroLengthAdvAddressConf,     false   }
             });
         }
 
@@ -271,7 +274,7 @@ public class BookieImplTests {
         private String getExpectedAddress() throws UnknownHostException, SocketException {
 
             /* If an address is advertised returns it*/
-            if (this.conf.getAdvertisedAddress() != null)
+            if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0)
                 return this.conf.getAdvertisedAddress();
 
             String hostname = null;
@@ -336,7 +339,7 @@ public class BookieImplTests {
      */
     @RunWith(value = PowerMockRunner.class)
     @PrepareForTest(DNS.class)
-    public static class ForceNotLoopbackAddress {
+    public static class ForceNotLoopbackAddressTest {
 
         @Test
         public void testSimulateGoogle() {
