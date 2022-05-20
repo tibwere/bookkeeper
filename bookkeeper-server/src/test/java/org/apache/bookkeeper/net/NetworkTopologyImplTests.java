@@ -13,8 +13,18 @@ import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test cases for NetworkTopologyImpl class
+ *
+ * @author Simone Tiberi
+ */
 @RunWith(value = Enclosed.class)
 public class NetworkTopologyImplTests {
+
+    /**
+     * Test cases that stimulate the "add and then check if
+     * it is contained" scenario
+     */
 
     @RunWith(value = Parameterized.class)
     public static class AddNodeAndCheckTests {
@@ -109,6 +119,11 @@ public class NetworkTopologyImplTests {
         }
     }
 
+    /**
+     * Test cases that stimulate different
+     * types of nodes removal (e.g. already inserted,
+     * not yet inserted, not removable)
+     */
     @RunWith(value = Parameterized.class)
     public static class RemoveNodeTests {
 
@@ -199,6 +214,10 @@ public class NetworkTopologyImplTests {
         }
     }
 
+    /**
+     * Test cases that stimulate forced scenarios
+     * that come out through the white-box analysis
+     */
     public static class ForcedScenariosTests {
 
         /******************************/
@@ -330,6 +349,10 @@ public class NetworkTopologyImplTests {
         }
     }
 
+    /**
+     * Test cases that stimulate different
+     * type of query for contains
+     */
     @RunWith(value = Parameterized.class)
     public static class ContainsTests {
         private SearchNode typeOfSearch;
