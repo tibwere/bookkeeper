@@ -31,11 +31,11 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Install ba-dua
-        run: git clone https://github.com/saeg/ba-dua && \
-                cd ba-dua && \
-                git checkout ba-dua-0.6.0 && \
-                mvn install && \
-                cd .. && \
+        run: git clone https://github.com/saeg/ba-dua &&
+                cd ba-dua &&
+                git checkout ba-dua-0.6.0 &&
+                mvn install -DskipTests &&
+                cd .. &&
                 rm -rf ba-dua
 
       - name: Verify Bookkeeper
