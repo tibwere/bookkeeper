@@ -406,7 +406,6 @@ public class NetworkTopologyImplTests {
         /**
          * CHILD OF INNER scenario          ->  def="530" use="532" target="533"
          * FAMILY scenario                  ->  def="531" use="532" target="531"
-         * WITH PARENT BUT LEV. 0 scenario  ->  def="531" use="531" target="537"
          */
         @Parameterized.Parameters
         public static Collection<Object[]> testCasesTuples() {
@@ -425,10 +424,6 @@ public class NetworkTopologyImplTests {
             familyScenario.put(grandpa, baseAssertMessage + " (GRANDPA)");
             familyScenario.put(father, baseAssertMessage + " (FATHER)");
             familyScenario.put(child, baseAssertMessage + " (CHILD)");
-
-            Map<Node,String> withParentButL0 = new HashMap<>();
-            withParentButL0.put(new NodeBase("null-parent", location, child, 1), baseAssertMessage);
-
 
             return Arrays.asList(new Object[][]{
                     // CLUSTER          NODES                   EXPECTED_RESULT
