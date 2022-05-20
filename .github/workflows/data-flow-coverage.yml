@@ -30,15 +30,13 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Clone Ba-Dua project
-        uses: actions/checkout@v2
-        with:
-          name: saeg/ba-dua
-          fetch-depth: 0
-          path: /tmp/ba-dua
-
-      - name: Install ba-dua locally
-        run: cd /tmp/ba-dua && git checkout ba-dua-0.6.0 && mvn -B install
+      - name: Install ba-dua
+        run: git clone https://github.com/saeg/ba-dua && \
+                cd ba-dua && \
+                git checkout ba-dua-0.6.0 && \
+                mvn install && \
+                cd .. && \
+                rm -rf ba-dua
 
       - name: Verify Bookkeeper
         run: mvn -B verify -P ba-dua-coverage
