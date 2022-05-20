@@ -21,9 +21,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Enumeration;
+import java.util.*;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -260,7 +258,7 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                Assert.assertEquals(this.getExpectedAddress(), sa.getHostName());
+                Assert.assertTrue(this.getExpectedAddress().contains(sa.getHostName()));
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
             } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
@@ -272,24 +270,23 @@ public class BookieImplTests {
          * the address cannot be hardcoded, so it is evaluated using InetAddress.getByName
          * instead of InetSocketAddress.
          */
-        private String getExpectedAddress() throws UnknownHostException, SocketException {
+        private List<String> getExpectedAddress() throws UnknownHostException, SocketException {
 
             /* If an address is advertised returns it*/
             if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0)
-                return this.conf.getAdvertisedAddress();
+                return Arrays.asList(this.conf.getAdvertisedAddress());
 
-            String hostname = null;
+            List<String> hostNames = new ArrayList<>();
             /* Use the local host canonical name or use a specified interface to determine it */
             if (this.conf.getListeningInterface() == null) {
-                hostname = InetAddress.getLocalHost().getCanonicalHostName();
+                hostNames.add(InetAddress.getLocalHost().getCanonicalHostName());
             } else {
                 Enumeration<InetAddress> enumIf = NetworkInterface.getByName(
                         this.conf.getListeningInterface()).getInetAddresses();
-                if (!enumIf.hasMoreElements())
-                    hostname = InetAddress.getLocalHost().getCanonicalHostName();
-                else
-                    /* fallback */
-                    hostname = enumIf.nextElement().getCanonicalHostName();
+
+                while(enumIf.hasMoreElements()) {
+                    hostNames.add(enumIf.nextElement().getCanonicalHostName());
+                }
             }
 
             /*
@@ -297,13 +294,21 @@ public class BookieImplTests {
              * then use canonical host name.
              * (see. https://superuser.com/questions/394816/what-is-the-difference-and-relation-between-host-name-and-canonical-name#:~:text=The%20host%20name%20is%20the,host%20is%20not%20actually%20called.)
              */
-            if (this.conf.getUseHostNameAsBookieID()) {
-                String ha = InetAddress.getByName(hostname).getCanonicalHostName();
-                /* In this case the comments inside the function has been taken as documentation */
-                return (this.conf.getUseShortHostName()) ? ha.split("\\.", 2)[0] : ha;
-            } else {
-                return InetAddress.getByName(hostname).getHostAddress();
+            List<String> addresses = new ArrayList<>();
+            for (String h : hostNames) {
+                if (this.conf.getUseHostNameAsBookieID()) {
+                    String currAddr = InetAddress.getByName(h).getCanonicalHostName();
+
+                    if (this.conf.getUseHostNameAsBookieID())
+                        addresses.add(currAddr.split("\\.", 2)[0]);
+                    else
+                        addresses.add(currAddr);
+                } else {
+                    addresses.add(InetAddress.getByName(h).getHostAddress());
+                }
             }
+
+            return addresses;
         }
     }
 
