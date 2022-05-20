@@ -295,7 +295,7 @@ public class NetworkTopologyImplTests {
             Node node = new NodeBase("test-node", location);
             nt.add(node);
 
-            Assert.assertEquals(0, nt.getLeaves("~" + location).size());
+            Assert.assertEquals("There should be no other leaves", 0, nt.getLeaves("~" + location).size());
         }
 
        /*********************************/

@@ -130,15 +130,16 @@ public class BookieImplTests {
                         this.ctx, this.masterKey);
 
                 ByteBuf bb = this.bookie.readEntry(this.builder.getLedgerID(), this.readEntryID);
-                Assert.assertEquals(this.builder.getLedgerID(), bb.readLong());
-                Assert.assertEquals(this.builder.getEntryID(), bb.readLong());
+                Assert.assertEquals("Ledger IDs should be the same", this.builder.getLedgerID(), bb.readLong());
+                Assert.assertEquals("Entry IDs should be the same", this.builder.getEntryID(), bb.readLong());
 
                 int i = 0;
                 byte[] expectedPayload = this.builder.getPayload();
                 while (i < expectedPayload.length && bb.isReadable())
-                    Assert.assertEquals(expectedPayload[i++], bb.readByte());
+                    Assert.assertEquals("Byte " + i + " of payload should be the same",
+                            expectedPayload[i++], bb.readByte());
 
-                Assert.assertTrue(i == expectedPayload.length);
+                Assert.assertTrue("Payload size should be the same", i == expectedPayload.length);
                 Assert.assertFalse("An exception should be thrown", this.expectedException);
             } catch (Exception e) {
                 Assert.assertTrue("Exception \"" + e.getClass().getName() + "\" should not be thrown",
@@ -258,7 +259,8 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                Assert.assertTrue(this.getExpectedAddress().contains(sa.getHostName()));
+                Assert.assertTrue("The address should be inside the list of available address for the host",
+                        this.getExpectedAddress().contains(sa.getHostName()));
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
             } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
@@ -364,7 +366,7 @@ public class BookieImplTests {
 
             try {
                 BookieSocketAddress actualSa = BookieImpl.getBookieAddress(conf);
-                Assert.assertEquals(expectedSa.getAddress().getHostAddress(), actualSa.getHostName());
+                Assert.assertEquals("Addresses should be the same", expectedSa.getAddress().getHostAddress(), actualSa.getHostName());
             } catch (UnknownHostException e) {
                 Assert.fail("This setup should not throw");
             }
