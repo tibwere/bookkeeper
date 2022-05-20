@@ -7,9 +7,7 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Set;
+import java.util.*;
 
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.spy;
@@ -375,6 +373,75 @@ public class NetworkTopologyImplTests {
                             nt.contains(this.validNode), SearchNode.PRESENT.equals(this.typeOfSearch));
             }
 
+        }
+    }
+
+    /**
+     * Further test cases for contains used to improve
+     * data flow coverage.
+     */
+    @RunWith(value = Parameterized.class)
+    public static class SpecialCasesContainsTests {
+
+        private NetworkTopologyImpl topology;
+        private Map<Node,String> nodes;
+        private boolean expectedResult;
+
+        public SpecialCasesContainsTests(NetworkTopologyImpl.InnerNode cluster, Map<Node,String> nodes,
+                                         boolean expectedResult) {
+            configure(cluster, nodes, expectedResult);
+        }
+
+        public void configure(NetworkTopologyImpl.InnerNode cluster, Map<Node,String> nodes, boolean expectedResult) {
+            this.nodes = nodes;
+            this.expectedResult = expectedResult;
+
+            this.topology = new NetworkTopologyImpl();
+
+            /* Necessary for CHILD OF INNER scenario */
+            if (cluster != null)
+                this.topology.clusterMap = cluster;
+        }
+
+        /**
+         * CHILD OF INNER scenario          ->  def="530" use="532" target="533"
+         * FAMILY scenario                  ->  def="531" use="532" target="531"
+         * WITH PARENT BUT LEV. 0 scenario  ->  def="531" use="531" target="537"
+         */
+        @Parameterized.Parameters
+        public static Collection<Object[]> testCasesTuples() {
+            final String location = NodeBase.PATH_SEPARATOR_STR + "/rack0";
+            final String baseAssertMessage = "This node has not been added";
+
+            NetworkTopologyImpl.InnerNode newClusterMap = new NetworkTopologyImpl.InnerNode(NetworkTopologyImpl.InnerNode.ROOT);
+            Map<Node, String> childOfInnerScenario = new HashMap<>();
+            childOfInnerScenario.put(new NodeBase("child-of-inner", location, newClusterMap, 1),
+                    "If a node is a child of a cluster, then is contained in it");
+
+            Node grandpa = new NodeBase("grandpa-node", location);
+            Node father = new NodeBase("father-node", location, grandpa, 1);
+            Node child = new NodeBase("child-node", location, father, 2);
+            Map<Node, String> familyScenario = new HashMap<>();
+            familyScenario.put(grandpa, baseAssertMessage + " (GRANDPA)");
+            familyScenario.put(father, baseAssertMessage + " (FATHER)");
+            familyScenario.put(child, baseAssertMessage + " (CHILD)");
+
+            Map<Node,String> withParentButL0 = new HashMap<>();
+            withParentButL0.put(new NodeBase("null-parent", location, child, 1), baseAssertMessage);
+
+
+            return Arrays.asList(new Object[][]{
+                    // CLUSTER          NODES                   EXPECTED_RESULT
+                    {  newClusterMap,   childOfInnerScenario,   true    },
+                    {  null,            familyScenario,         false   },
+            });
+        }
+
+        @Test
+        public void testSpecialCase() {
+            this.nodes.forEach((node,assertMsg) -> {
+                Assert.assertEquals(assertMsg, this.expectedResult, this.topology.contains(node));
+            });
         }
     }
 
