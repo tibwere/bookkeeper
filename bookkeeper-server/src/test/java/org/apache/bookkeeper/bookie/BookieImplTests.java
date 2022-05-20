@@ -259,8 +259,10 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                Assert.assertTrue("The address should be inside the list of available address for the host",
-                        this.getExpectedAddress().contains(sa.getHostName()));
+                List<String> expectedAddresses = this.getExpectedAddress();
+                Assert.assertTrue("The address should be inside the list of available address for the host (list: [" +
+                                String.join(", ", expectedAddresses) + "], actual: " + sa.getHostName() + ")",
+                        expectedAddresses.contains(sa.getHostName()));
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
             } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
