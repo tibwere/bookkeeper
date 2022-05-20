@@ -37,7 +37,7 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Show network informations:
+      - name: Show network informations
         run: ip a && hostname
 
       - name: Verify Bookkeeper
