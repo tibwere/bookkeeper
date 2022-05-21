@@ -264,13 +264,13 @@ public class BookieImplTests {
                 Assert.assertTrue("Address mismatch",
                         expectedAddresses.contains(sa.getHostName()));
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
-            } catch (UnknownHostException | IllegalArgumentException | SocketException | NamingException e) {
+            } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
             }
         }
 
 
-        private List<String> getHostnames() throws SocketException, UnknownHostException, NamingException {
+        private List<String> getHostnames() throws SocketException, UnknownHostException {
             List<String> hostnames = new ArrayList<>();
 
             if (this.conf.getListeningInterface() == null)
@@ -284,14 +284,16 @@ public class BookieImplTests {
                 if (currAddr.getHostAddress().split("\\.").length != 4)
                     continue;
 
-                hostnames.add(DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null));
+                try {
+                    hostnames.add(DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null));
+                } catch (NamingException | UnknownHostException e) {/*ignored*/}
             }
 
             return hostnames;
         }
 
 
-        private String getExpectedAddress() throws UnknownHostException, SocketException, NamingException {
+        private String getExpectedAddress() throws UnknownHostException, SocketException {
 
             if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0)
                 return this.conf.getAdvertisedAddress();
