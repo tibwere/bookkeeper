@@ -289,7 +289,7 @@ public class BookieImplTests {
                 } catch (NamingException | UnknownHostException e) {/*ignored*/}
             }
 
-            return hostnames;
+            return (hostnames.isEmpty()) ? Arrays.asList(InetAddress.getLocalHost().getCanonicalHostName()) : hostnames;
         }
 
 
