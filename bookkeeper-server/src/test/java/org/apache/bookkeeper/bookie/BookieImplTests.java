@@ -19,6 +19,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import javax.naming.NamingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -139,7 +140,7 @@ public class BookieImplTests {
                     Assert.assertEquals("Byte " + i + " of payload should be the same",
                             expectedPayload[i++], bb.readByte());
 
-                Assert.assertTrue("Payload size should be the same", i == expectedPayload.length);
+                Assert.assertEquals("Payload size should be the same", i, expectedPayload.length);
                 Assert.assertFalse("An exception should be thrown", this.expectedException);
             } catch (Exception e) {
                 Assert.assertTrue("Exception \"" + e.getClass().getName() + "\" should not be thrown",
@@ -225,16 +226,22 @@ public class BookieImplTests {
          */
         @Parameterized.Parameters
         public static Collection<Object[]> testCasesTuples() {
-            ServerConfiguration defaultConf = TestBKConfiguration.newServerConfiguration()
-                    .setListeningInterface("lo"); // to avoid unpredictable execution specially in CI pipeline set up a precise interface
-            ServerConfiguration advertisedAddrConf = defaultConf.setAdvertisedAddress("isw2.software.testing");
-            ServerConfiguration nullListeningInterface = defaultConf.setListeningInterface(null);
-            ServerConfiguration hostNameAsBookieIDConf = defaultConf.setUseHostNameAsBookieID(true);
-            ServerConfiguration shortHostNameAsBookieIDConf = defaultConf.setUseHostNameAsBookieID(true)
+            ServerConfiguration defaultConf = TestBKConfiguration.newServerConfiguration();
+            ServerConfiguration advertisedAddrConf = TestBKConfiguration.newServerConfiguration()
+                    .setAdvertisedAddress("isw2.software.testing");
+            ServerConfiguration nullListeningInterface = TestBKConfiguration.newServerConfiguration()
+                    .setListeningInterface(null);
+            ServerConfiguration hostNameAsBookieIDConf = TestBKConfiguration.newServerConfiguration()
+                    .setUseHostNameAsBookieID(true);
+            ServerConfiguration shortHostNameAsBookieIDConf = TestBKConfiguration.newServerConfiguration()
+                    .setUseHostNameAsBookieID(true)
                     .setUseShortHostName(true);
-            ServerConfiguration denyLoopbackConf = defaultConf.setAllowLoopback(false);
-            ServerConfiguration invalidPortConf = defaultConf.setBookiePort(Integer.MAX_VALUE);
-            ServerConfiguration zeroLengthAdvAddressConf = defaultConf.setAdvertisedAddress("");
+            ServerConfiguration denyLoopbackConf = TestBKConfiguration.newServerConfiguration()
+                    .setAllowLoopback(false);
+            ServerConfiguration invalidPortConf = TestBKConfiguration.newServerConfiguration()
+                    .setBookiePort(Integer.MAX_VALUE);
+            ServerConfiguration zeroLengthAdvAddressConf = TestBKConfiguration.newServerConfiguration()
+                    .setAdvertisedAddress("");
 
             return Arrays.asList(new Object[][]{
                     // SERVER_CONFIG                EXPECTED_EXCEPTION
@@ -253,60 +260,52 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                List<String> expectedAddresses = this.getExpectedAddress();
-                Assert.assertTrue("The address should be inside the list of available address for the host (list: [" +
-                                String.join(", ", expectedAddresses) + "], actual: " + sa.getHostName() + ")",
+                String expectedAddresses = this.getExpectedAddress();
+                Assert.assertTrue("Address mismatch",
                         expectedAddresses.contains(sa.getHostName()));
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
-            } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
+            } catch (UnknownHostException | IllegalArgumentException | SocketException | NamingException e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
             }
         }
 
-        /**
-         * Since these tests must run in any machine and not only in the local one,
-         * the address cannot be hardcoded, so it is evaluated using InetAddress.getByName
-         * instead of InetSocketAddress.
-         */
-        private List<String> getExpectedAddress() throws UnknownHostException, SocketException {
 
-            /* If an address is advertised returns it*/
+        private List<String> getHostnames() throws SocketException, UnknownHostException, NamingException {
+            List<String> hostnames = new ArrayList<>();
+
+            if (this.conf.getListeningInterface() == null)
+                return Arrays.asList(InetAddress.getLocalHost().getCanonicalHostName());
+
+            Enumeration<InetAddress> iaddrs = NetworkInterface.getByName(this.conf.getListeningInterface())
+                    .getInetAddresses();
+            
+            while (iaddrs.hasMoreElements()) {
+                InetAddress currAddr = iaddrs.nextElement();
+                if (currAddr.getHostAddress().split("\\.").length != 4)
+                    continue;
+
+                hostnames.add(DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null));
+            }
+
+            return hostnames;
+        }
+
+
+        private String getExpectedAddress() throws UnknownHostException, SocketException, NamingException {
+
             if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0)
-                return Arrays.asList(this.conf.getAdvertisedAddress());
+                return this.conf.getAdvertisedAddress();
 
-            List<String> hostNames = new ArrayList<>();
-            /* Use the local host canonical name or use a specified interface to determine it */
-            if (this.conf.getListeningInterface() == null) {
-                hostNames.add(InetAddress.getLocalHost().getCanonicalHostName());
+            String hostName = getHostnames().get(0);
+            if (this.conf.getUseHostNameAsBookieID()) {
+                String addr = InetAddress.getByName(hostName).getCanonicalHostName();
+                if (this.conf.getUseShortHostName())
+                    return addr.split("\\.", 2)[0];
+                else
+                    return addr;
             } else {
-                Enumeration<InetAddress> enumIf = NetworkInterface.getByName(
-                        this.conf.getListeningInterface()).getInetAddresses();
-
-                while(enumIf.hasMoreElements()) {
-                    hostNames.add(enumIf.nextElement().getCanonicalHostName());
-                }
+                return InetAddress.getByName(hostName).getHostAddress();
             }
-
-            /*
-             * If in the configuration it's specified to use hostname as bookieID,
-             * then use canonical host name.
-             * (see. https://superuser.com/questions/394816/what-is-the-difference-and-relation-between-host-name-and-canonical-name#:~:text=The%20host%20name%20is%20the,host%20is%20not%20actually%20called.)
-             */
-            List<String> addresses = new ArrayList<>();
-            for (String h : hostNames) {
-                if (this.conf.getUseHostNameAsBookieID()) {
-                    String currAddr = InetAddress.getByName(h).getCanonicalHostName();
-
-                    if (this.conf.getUseHostNameAsBookieID())
-                        addresses.add(currAddr.split("\\.", 2)[0]);
-                    else
-                        addresses.add(currAddr);
-                } else {
-                    addresses.add(InetAddress.getByName(h).getHostAddress());
-                }
-            }
-
-            return addresses;
         }
     }
 
