@@ -30,13 +30,8 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-          restore-keys: ${{ runner.os }}-m2
-
       - name: Show network informations
         run: ip a && hostname
 
       - name: Verify Bookkeeper
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify
