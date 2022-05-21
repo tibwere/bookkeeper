@@ -225,22 +225,16 @@ public class BookieImplTests {
          */
         @Parameterized.Parameters
         public static Collection<Object[]> testCasesTuples() {
-            ServerConfiguration defaultConf = TestBKConfiguration.newServerConfiguration();
-            ServerConfiguration advertisedAddrConf = TestBKConfiguration.newServerConfiguration()
-                    .setAdvertisedAddress("isw2.software.testing");
-            ServerConfiguration nullListeningInterface = TestBKConfiguration.newServerConfiguration()
-                    .setListeningInterface(null);
-            ServerConfiguration hostNameAsBookieIDConf = TestBKConfiguration.newServerConfiguration()
-                    .setUseHostNameAsBookieID(true);
-            ServerConfiguration shortHostNameAsBookieIDConf = TestBKConfiguration.newServerConfiguration()
-                    .setUseHostNameAsBookieID(true)
+            ServerConfiguration defaultConf = TestBKConfiguration.newServerConfiguration()
+                    .setListeningInterface("lo"); // to avoid unpredictable execution specially in CI pipeline set up a precise interface
+            ServerConfiguration advertisedAddrConf = defaultConf.setAdvertisedAddress("isw2.software.testing");
+            ServerConfiguration nullListeningInterface = defaultConf.setListeningInterface(null);
+            ServerConfiguration hostNameAsBookieIDConf = defaultConf.setUseHostNameAsBookieID(true);
+            ServerConfiguration shortHostNameAsBookieIDConf = defaultConf.setUseHostNameAsBookieID(true)
                     .setUseShortHostName(true);
-            ServerConfiguration denyLoopbackConf = TestBKConfiguration.newServerConfiguration()
-                    .setAllowLoopback(false);
-            ServerConfiguration invalidPortConf = TestBKConfiguration.newServerConfiguration()
-                    .setBookiePort(Integer.MAX_VALUE);
-            ServerConfiguration zeroLengthAdvAddressConf = TestBKConfiguration.newServerConfiguration()
-                    .setAdvertisedAddress("");
+            ServerConfiguration denyLoopbackConf = defaultConf.setAllowLoopback(false);
+            ServerConfiguration invalidPortConf = defaultConf.setBookiePort(Integer.MAX_VALUE);
+            ServerConfiguration zeroLengthAdvAddressConf = defaultConf.setAdvertisedAddress("");
 
             return Arrays.asList(new Object[][]{
                     // SERVER_CONFIG                EXPECTED_EXCEPTION
