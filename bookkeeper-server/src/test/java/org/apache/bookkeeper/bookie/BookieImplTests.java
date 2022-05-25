@@ -208,6 +208,7 @@ public class BookieImplTests {
 
         private ServerConfiguration conf;
         private boolean expectedException;
+        private String expectedAddress;
 
         public GetBookieAddressTests(ServerConfiguration conf, boolean expectedException) {
             configure(conf, expectedException);
@@ -260,53 +261,59 @@ public class BookieImplTests {
         public void testGetBookieAddress() {
             try {
                 BookieSocketAddress sa = BookieImpl.getBookieAddress(this.conf);
-                String expectedAddresses = this.getExpectedAddress();
-                Assert.assertTrue("Address mismatch",
-                        expectedAddresses.contains(sa.getHostName()));
+                Assert.assertEquals("Address mismatch",
+                        this.expectedAddress, sa.getHostName());
                 Assert.assertFalse("This configuration should throw an exception", this.expectedException);
-            } catch (UnknownHostException | IllegalArgumentException | SocketException e) {
+            } catch (UnknownHostException | IllegalArgumentException  e) {
                 Assert.assertTrue("This configuration should not throw an exception", this.expectedException);
             }
         }
 
 
-        private List<String> getHostnames() throws SocketException, UnknownHostException {
-            List<String> hostnames = new ArrayList<>();
+        private String getHostname() throws SocketException, UnknownHostException {
 
             if (this.conf.getListeningInterface() == null)
-                return Arrays.asList(InetAddress.getLocalHost().getCanonicalHostName());
+                return InetAddress.getLocalHost().getCanonicalHostName();
 
             Enumeration<InetAddress> iaddrs = NetworkInterface.getByName(this.conf.getListeningInterface())
                     .getInetAddresses();
             
             while (iaddrs.hasMoreElements()) {
                 InetAddress currAddr = iaddrs.nextElement();
+
+                // skip ipv6
                 if (currAddr.getHostAddress().split("\\.").length != 4)
                     continue;
 
                 try {
-                    hostnames.add(DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null));
+                    return DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null);
                 } catch (NamingException | UnknownHostException e) {/*ignored*/}
             }
 
-            return (hostnames.isEmpty()) ? Arrays.asList(InetAddress.getLocalHost().getCanonicalHostName()) : hostnames;
+            if (!this.conf.getAllowLoopback())
+                this.expectedException = true;
+
+            return InetAddress.getLocalHost().getCanonicalHostName();
         }
 
+        @Before
+        public void setupExpectedAddress() {
 
-        private String getExpectedAddress() throws UnknownHostException, SocketException {
+            if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0) {
+                this.expectedAddress = this.conf.getAdvertisedAddress();
+                return;
+            }
 
-            if (this.conf.getAdvertisedAddress() != null && this.conf.getAdvertisedAddress().trim().length() > 0)
-                return this.conf.getAdvertisedAddress();
-
-            String hostName = getHostnames().get(0);
-            if (this.conf.getUseHostNameAsBookieID()) {
-                String addr = InetAddress.getByName(hostName).getCanonicalHostName();
-                if (this.conf.getUseShortHostName())
-                    return addr.split("\\.", 2)[0];
-                else
-                    return addr;
-            } else {
-                return InetAddress.getByName(hostName).getHostAddress();
+            try {
+                String hostName = getHostname();
+                if (this.conf.getUseHostNameAsBookieID()) {
+                    String addr = InetAddress.getByName(hostName).getCanonicalHostName();
+                    this.expectedAddress = (this.conf.getUseShortHostName()) ? addr.split("\\.", 2)[0] : addr;
+                } else {
+                    this.expectedAddress = InetAddress.getByName(hostName).getHostAddress();
+                }
+            } catch (SocketException | UnknownHostException e) {
+                Assert.fail("Before phase should not cause exception");
             }
         }
     }
