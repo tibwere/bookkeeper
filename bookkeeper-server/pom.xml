@@ -346,43 +346,11 @@
       </activation>
       <properties>
         <!-- Use a stable version instead of SNAPSHOT one -->
-        <ba-dua.version>0.6.0</ba-dua.version>
-        <argLine>-javaagent:target/dependency/ba-dua-agent-rt-${ba-dua.version}-all.jar -Doutput.file=target/badua.ser</argLine>
+        <argLine>-javaagent:../dfc/ba-dua-agent-rt-0.6.0-all.jar -Doutput.file=target/badua.ser</argLine>
       </properties>
       <!-- Needed for generate the report -->
-      <dependencies>
-        <dependency>
-          <groupId>br.usp.each.saeg</groupId>
-          <artifactId>ba-dua-cli</artifactId>
-          <version>${ba-dua.version}</version>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
-
-          <!-- Copy ba-dua-agent-rt from .m2 directory to target/dependency -->
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <version>2.10</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>copy</goal>
-                </goals>
-                <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>br.usp.each.saeg</groupId>
-                      <artifactId>ba-dua-agent-rt</artifactId>
-                      <classifier>all</classifier>
-                      <version>${ba-dua.version}</version>
-                    </artifactItem>
-                  </artifactItems>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
 
           <!-- Generate report in xml format -->
           <plugin>
@@ -391,22 +359,14 @@
             <version>1.5.0</version>
             <executions>
               <execution>
+                <id>Generate Ba-Dua report</id>
                 <goals>
-                  <goal>java</goal>
+                  <goal>exec</goal>
                 </goals>
                 <phase>verify</phase>
                 <configuration>
-                  <mainClass>br.usp.each.saeg.badua.cli.Report</mainClass>
-                  <arguments>
-                    <argument>-input</argument>
-                    <argument>${project.build.directory}/badua.ser</argument>
-                    <argument>-classes</argument>
-                    <argument>${project.build.outputDirectory}</argument>
-                    <argument>-show-classes</argument>
-                    <argument>-show-methods</argument>
-                    <argument>-xml</argument>
-                    <argument>${project.build.directory}/badua.xml</argument>
-                  </arguments>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <executable>${project.basedir}/../dfc/generate-report.sh</executable>
                 </configuration>
               </execution>
             </executions>
