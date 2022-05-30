@@ -8,6 +8,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.spy;
@@ -20,6 +21,21 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(value = Enclosed.class)
 public class NetworkTopologyImplTests {
+
+    public static void assertWriteUnlocked(NetworkTopologyImpl nt) {
+        boolean lockState = ((ReentrantReadWriteLock)nt.netlock).isWriteLocked();
+        Assert.assertFalse("The lock should be released after insertion", lockState);
+    }
+
+    public static void assertReadUnlocked(NetworkTopologyImpl nt) {
+        boolean lockState = ((ReentrantReadWriteLock)nt.netlock).writeLock().tryLock();
+        if (lockState) {
+            ((ReentrantReadWriteLock)nt.netlock).writeLock().unlock();
+        } else {
+            Assert.fail("The lock should be released after insertion");
+        }
+    }
+
 
     /**
      * Test cases that stimulate the "add and then check if
@@ -107,12 +123,18 @@ public class NetworkTopologyImplTests {
             try {
                 NetworkTopology nt = new NetworkTopologyImpl();
                 Node n = getNodeToBeAdded();
+                int expectedRackNumber = nt.getNumOfRacks() + 1;
                 nt.add(n);
 
                 Set<Node> nodes = nt.getLeaves(this.rack);
                 Assert.assertEquals("Wrong number of leaves detected", this.expectedLeaves, nodes.size());
-                if (!NodeType.NULL.equals(this.type))
+                if (!NodeType.NULL.equals(this.type)) {
+                    Assert.assertEquals("Number of racks should be increased",
+                            expectedRackNumber, nt.getNumOfRacks());
                     Assert.assertTrue("Node should be contained inside the topology", nt.contains(n));
+                }
+
+                assertWriteUnlocked((NetworkTopologyImpl) nt);
             } catch (IllegalArgumentException e) {
                 Assert.assertTrue("IllegalArgumentException should have been thrown", this.expectedException);
             }
@@ -125,7 +147,7 @@ public class NetworkTopologyImplTests {
      * not yet inserted, not removable)
      */
     @RunWith(value = Parameterized.class)
-    public static class RemoveNodeTests {
+    public static class RemoveNodeTests     {
 
         private Node nodeToBeAdded;
         private RemovalTypes typeOfRemoval;
@@ -193,12 +215,17 @@ public class NetworkTopologyImplTests {
                 Node nodeToBeRemoved = getNodeToBeRemoved();
 
                 int oldSize = this.nt.getLeaves(nodeToBeAdded.getNetworkLocation()).size();
+                int expectedRackNumber = this.nt.getNumOfRacks() - 1;
+
                 this.nt.remove(nodeToBeRemoved);
+
                 int newSize = this.nt.getLeaves(nodeToBeAdded.getNetworkLocation()).size();
 
                 switch (this.typeOfRemoval) {
                     case ADDED:
                         Assert.assertEquals("The number of leaves should be decreased", oldSize-1, newSize);
+                        Assert.assertEquals("Number of racks should be decreased",
+                                expectedRackNumber, nt.getNumOfRacks());
                         break;
                     case INNER:
                         Assert.fail("It is not possible to remove inner node");
@@ -207,6 +234,8 @@ public class NetworkTopologyImplTests {
                         Assert.assertEquals("The number of leaves should not be decreased", oldSize, newSize);
                         break;
                 }
+
+                assertWriteUnlocked((NetworkTopologyImpl) nt);
             } catch (IllegalArgumentException e) {
                 Assert.assertTrue("It is not possible to remove inner node",
                         RemovalTypes.INNER.equals(this.typeOfRemoval));
@@ -310,11 +339,18 @@ public class NetworkTopologyImplTests {
         @Test
         public void getLeavesWithTilde() {
             NetworkTopology nt = new NetworkTopologyImpl();
-            String location = NodeBase.PATH_SEPARATOR_STR + "rack0";
-            Node node = new NodeBase("test-node", location);
-            nt.add(node);
+            String []locations = {
+                    NodeBase.PATH_SEPARATOR_STR + "rack0",
+                    NodeBase.PATH_SEPARATOR_STR + "rack1"
+            };
 
-            Assert.assertEquals("There should be no other leaves", 0, nt.getLeaves("~" + location).size());
+            Node []nodes = {
+                    new NodeBase("test-node-1", locations[0]),
+                    new NodeBase("test-node-2", locations[1])
+            };
+
+            Arrays.asList(nodes).forEach(nt::add);
+            Assert.assertEquals("There should be no other leaves", 1, nt.getLeaves("~" + locations[0]).size());
         }
 
        /*********************************/
@@ -396,6 +432,7 @@ public class NetworkTopologyImplTests {
                             nt.contains(this.validNode), SearchNode.PRESENT.equals(this.typeOfSearch));
             }
 
+            assertReadUnlocked((NetworkTopologyImpl) nt);
         }
     }
 
