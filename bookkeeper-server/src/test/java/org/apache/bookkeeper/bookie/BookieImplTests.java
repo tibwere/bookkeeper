@@ -7,6 +7,7 @@ import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.net.BookieSocketAddress;
 import org.apache.bookkeeper.net.DNS;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks;
+import org.apache.bookkeeper.util.IOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -20,6 +21,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.naming.NamingException;
+import java.io.File;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -64,7 +66,7 @@ public class BookieImplTests {
         private Object ctx;
         private byte[] masterKey;
         private boolean expectedException;
-
+        private File dirs;
         private Bookie bookie;
 
         public AddEntryTests(long readEntryID, EntryBuilder builder, boolean ackBeforeSync, Object ctx, byte[] masterKey,
@@ -80,12 +82,6 @@ public class BookieImplTests {
             this.ctx = ctx;
             this.masterKey = masterKey;
             this.expectedException = expectedException;
-
-            try {
-                this.bookie = new TestBookieImpl(TestBKConfiguration.newServerConfiguration());
-            } catch (Exception e) {
-                Assert.fail("The exception \"" + e.getClass().getName() + "\" should not be thrown");
-            }
         }
 
         /**
@@ -116,12 +112,22 @@ public class BookieImplTests {
 
         @Before
         public void startupBookie() {
-            this.bookie.start();
+            try {
+                this.dirs = IOUtils.createTempDir("bookie-impl-tests", ".tmp");
+                ServerConfiguration config = TestBKConfiguration.newServerConfiguration()
+                        .setJournalDirName(this.dirs.toString())
+                        .setLedgerDirNames(new String[] {this.dirs.getAbsolutePath()});
+                this.bookie = new TestBookieImpl(config);
+                this.bookie.start();
+            } catch (Exception e) {
+                Assert.fail("The exception \"" + e.getClass().getName() + "\" should not be thrown");
+            }
         }
 
         @After
         public void shutdownBookie() {
             this.bookie.shutdown();
+            this.dirs.delete();
         }
 
         @Test
