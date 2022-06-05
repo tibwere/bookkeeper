@@ -8,6 +8,7 @@ import org.apache.bookkeeper.net.BookieSocketAddress;
 import org.apache.bookkeeper.net.DNS;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks;
 import org.apache.bookkeeper.util.IOUtils;
+import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -22,6 +23,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.naming.NamingException;
 import java.io.File;
+import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -126,8 +128,13 @@ public class BookieImplTests {
 
         @After
         public void shutdownBookie() {
-            this.bookie.shutdown();
-            this.dirs.delete();
+            try {
+                this.bookie.shutdown();
+                FileUtils.deleteDirectory(this.dirs);
+            } catch (IOException  e) {
+                // if it fails, at most the directory is not deleted,
+                // but it makes no sense to fail the test
+            }
         }
 
         @Test
