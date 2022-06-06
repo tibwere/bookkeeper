@@ -382,8 +382,10 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <withHistory>true</withHistory>
+        <!-- For incremental analysis this should be commented out -->
+        <!-- <withHistory>true</withHistory> -->
         <pitest.version>1.8.0</pitest.version>
+        <pitest.history.file>${project.build.directory}/pitest.history</pitest.history.file>
       </properties>
       <build>
         <plugins>
@@ -405,6 +407,8 @@
               <avoidCallsTo>
                 <avoidCallsTo>org.slf4j</avoidCallsTo>
               </avoidCallsTo>
+              <historyInputFile>${pitest.history.file}</historyInputFile>
+              <historyOutputFile>${pitest.history.file}</historyOutputFile>
             </configuration>
             <executions>
               <execution>
