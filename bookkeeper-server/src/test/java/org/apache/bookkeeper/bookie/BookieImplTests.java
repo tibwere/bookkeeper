@@ -269,7 +269,10 @@ public class BookieImplTests {
                     { nullListeningInterface,       false   },
                     { hostNameAsBookieIDConf,       false   },
                     { shortHostNameAsBookieIDConf,  false   },
-                    { denyLoopbackConf,             true    },
+                    // by default this configuration should not throw an exception
+                    // but if only loopback available an exception should be thrown
+                    // so this field is changed dynamically inside the before method
+                    { denyLoopbackConf,             false   },
                     { invalidPortConf,              true    },
                     { zeroLengthAdvAddressConf,     false   }
             });
@@ -331,9 +334,6 @@ public class BookieImplTests {
                 } catch (NamingException | UnknownHostException e) {/*ignored*/}
             }
 
-            if (!this.conf.getAllowLoopback())
-                this.expectedException = true;
-
             return InetAddress.getLocalHost().getCanonicalHostName();
         }
 
@@ -346,13 +346,17 @@ public class BookieImplTests {
             }
 
             try {
-                String hostName = getHostname();
+                InetAddress inetAddress = InetAddress.getByName(getHostname());
+                if (inetAddress.isLoopbackAddress() && !this.conf.getAllowLoopback())
+                    this.expectedException = true;
+
                 if (this.conf.getUseHostNameAsBookieID()) {
-                    String addr = InetAddress.getByName(hostName).getCanonicalHostName();
+                    String addr = inetAddress.getCanonicalHostName();
                     this.expectedAddress = (this.conf.getUseShortHostName()) ? addr.split("\\.", 2)[0] : addr;
                 } else {
-                    this.expectedAddress = InetAddress.getByName(hostName).getHostAddress();
+                    this.expectedAddress = inetAddress.getHostAddress();
                 }
+
             } catch (SocketException | UnknownHostException e) {
                 Assert.fail("Before phase should not cause exception");
             }
@@ -417,4 +421,7 @@ public class BookieImplTests {
             }
         }
     }
+
+    private enum ExceptionType {NO_EXCEPTION, ILLEGAL_PORT, }
+
 }
