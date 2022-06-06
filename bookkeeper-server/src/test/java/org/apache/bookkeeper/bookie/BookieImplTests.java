@@ -22,11 +22,16 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Enumeration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -282,6 +287,29 @@ public class BookieImplTests {
             }
         }
 
+        private String reverseQuery(InetAddress address) throws NamingException {
+            String []octets = address.getHostAddress().split("\\.");
+            if (octets.length != 4)
+                throw new NamingException("IPV6 is not supported");
+
+            // See:
+            // 1) https://it.wikipedia.org/wiki/Risoluzione_DNS_inversa
+            // 2) https://stackoverflow.com/questions/7097623/need-to-perform-a-reverse-dns-lookup-of-a-particular-ip-address-in-java
+            StringBuilder queryBuilder = new StringBuilder("dns:///");
+            for (int i = octets.length - 1; i >= 0; i--)
+                queryBuilder.append(octets[i]).append(".");
+
+            queryBuilder.append("in-addr.arpa");
+
+            DirContext dirContext = new InitialDirContext();
+            Attributes attribute = dirContext.getAttributes(queryBuilder.toString(), new String[] {"PTR"});
+
+            if (attribute != null && attribute.get("PTR") != null && attribute.get("PTR").get() != null)
+                return attribute.get("PTR").get().toString();
+            else
+                throw new NamingException("Invalid response");
+        }
+
 
         private String getHostname() throws SocketException, UnknownHostException {
 
@@ -299,7 +327,7 @@ public class BookieImplTests {
                     continue;
 
                 try {
-                    return DNS.reverseDns(InetAddress.getByName(currAddr.getHostAddress()), null);
+                    return reverseQuery(InetAddress.getByName(currAddr.getHostAddress()));
                 } catch (NamingException | UnknownHostException e) {/*ignored*/}
             }
 
