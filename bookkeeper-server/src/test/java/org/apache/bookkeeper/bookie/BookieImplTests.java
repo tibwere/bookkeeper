@@ -421,7 +421,4 @@ public class BookieImplTests {
             }
         }
     }
-
-    private enum ExceptionType {NO_EXCEPTION, ILLEGAL_PORT, }
-
 }
